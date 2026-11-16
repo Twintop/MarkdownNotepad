@@ -28,8 +28,6 @@ Found a bug, or have an idea? [Open an issue](https://github.com/Twintop/Markdow
 - **Save Copy** saves a note, with any changes you haven't saved, as a new note ("Title (copy)")
   and edits that one; the note you started from keeps what it had at its last save.
 - Unsaved changes are kept through a logout or `/reload`.
-- Along the bottom of the editor: the version, and **News** (what's new, which also opens by
-  itself the first time a new version runs), **GitHub Issues**, **Ko-fi**, and **Discord**.
 
 ## Using it
 
