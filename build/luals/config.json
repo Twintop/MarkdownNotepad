@@ -1,0 +1,59 @@
+{
+    "runtime": {
+        "version": "Lua 5.1",
+        "builtin": {
+            "basic": "disable",
+            "debug": "disable",
+            "io": "disable",
+            "math": "disable",
+            "os": "disable",
+            "package": "disable",
+            "string": "disable",
+            "table": "disable",
+            "utf8": "disable"
+        }
+    },
+    "diagnostics": {
+        "globals": [
+            "StaticPopupDialogs",
+            "StaticPopup_Show",
+            "OKAY",
+            "CANCEL",
+            "SAVE",
+            "DELETE",
+            "CLOSE",
+            "EDIT",
+            "SEARCH",
+            "SETTINGS",
+            "UISpecialFrames",
+            "SlashCmdList",
+            "LibStub",
+            "MarkdownNotepad",
+            "MarkdownNotepadDB",
+            "MarkdownNotepadCharDB",
+            "MOCK",
+            "T",
+            "ns",
+            "VALID_METHODS",
+            "FUZZ_SESSIONS",
+            "FUZZ_STEPS",
+            "TOC_METADATA",
+            "MarkdownNotepadNews",
+            "ChatEdit_InsertLink",
+            "GetAddOnMetadata",
+            "GetSpellInfo",
+            "GetSpellLink"
+        ],
+        "disable": [
+            "assign-type-mismatch"
+        ]
+    },
+    "type": {
+        "weakUnionCheck": true
+    },
+    "workspace": {
+        "ignoreDir": [
+            "Libs"
+        ]
+    }
+}

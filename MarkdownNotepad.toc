@@ -1,0 +1,48 @@
+## Interface: 120105, 50504, 40402, 38002, 30405, 20506, 16001, 11509
+## Title: Markdown Notepad
+## Notes: Write notes in Markdown, preview them as you type, and keep them on screen.
+## Author: Twintop
+## Version: 1.0.0
+## X-ReleaseType: release
+## X-ReleaseDate: 2026-11-16
+## IconTexture: Interface\Icons\INV_Misc_Note_01
+## SavedVariables: MarkdownNotepadDB
+## SavedVariablesPerCharacter: MarkdownNotepadCharDB
+## AddonCompartmentFunc: MarkdownNotepad_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: MarkdownNotepad_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: MarkdownNotepad_OnAddonCompartmentLeave
+## X-Category: Miscellaneous
+## X-Website: https://github.com/Twintop/MarkdownNotepad
+## X-License: MIT
+
+Libs\LibStub.lua
+Libs\LibSimpleHTMLMarkdown\LibSimpleHTMLMarkdown.xml
+
+Localization\Localization.lua
+Localization\enUS.lua
+Localization\deDE.lua
+Localization\enCN.lua
+Localization\enGB.lua
+Localization\enTW.lua
+Localization\esES.lua
+Localization\esMX.lua
+Localization\frFR.lua
+Localization\itIT.lua
+Localization\koKR.lua
+Localization\ptBR.lua
+Localization\ptPT.lua
+Localization\ruRU.lua
+Localization\zhCN.lua
+Localization\zhTW.lua
+Localization\LocalizationPost.lua
+
+Markup.lua
+Actions.lua
+Core.lua
+Widgets.lua
+Render.lua
+CodeEditor.lua
+Editor.lua
+Viewer.lua
+NewsContent.lua
+News.lua

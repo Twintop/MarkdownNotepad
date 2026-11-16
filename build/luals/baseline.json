@@ -1,0 +1,20 @@
+[
+  {
+    "file": "Render.lua",
+    "code": "deprecated",
+    "message": "Deprecated.",
+    "count": 1
+  },
+  {
+    "file": "Render.lua",
+    "code": "redundant-parameter",
+    "message": "This function expects a maximum of 0 argument(s) but instead it is receiving 1.",
+    "count": 1
+  },
+  {
+    "file": "tests/test_smoke.lua",
+    "code": "redundant-parameter",
+    "message": "This function expects a maximum of 0 argument(s) but instead it is receiving 1.",
+    "count": 1
+  }
+]

@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="MARKDOWNNOTEPAD_TOGGLE" header="MARKDOWNNOTEPAD" category="ADDONS">
+		MarkdownNotepad:ToggleEditor()
+	</Binding>
+</Bindings>

@@ -1,0 +1,87 @@
+name: Checks
+
+# The offline checks, one job each so a failure names what broke. Runs on every pull request and branch push,
+# and release.yml calls it before staging a tag. None of these load the game client: they catch syntax,
+# load-order, bootstrap, window-construction, and type errors, and test the editor's text handling against a
+# mock of the WoW API (tests/), not in-game behavior.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    name: Lua syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Lua 5.1
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.1 > /dev/null
+
+      - name: Syntax-check every Lua file
+        shell: bash
+        run: |
+          status=0
+          while IFS= read -r f; do
+            luac5.1 -p "$f" || status=1
+          done < <(git ls-files '*.lua')
+          exit $status
+
+      - name: Require every TOC file entry to exist
+        shell: bash
+        run: |
+          status=0
+          while IFS= read -r f; do
+            [ -f "$f" ] || { echo "MarkdownNotepad.toc lists $f, which does not exist"; status=1; }
+          done < <(tr -d '\r' < MarkdownNotepad.toc | sed 's/^\xEF\xBB\xBF//' | grep -v '^#' | sed 's/[[:space:]]*$//' | grep -v '^$' | tr '\134' '/')
+          exit $status
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    env:
+      # The mock of the WoW API takes each widget's methods from these annotations, so a method the game
+      # doesn't have fails a test. Match the VS Code extension, as the LuaLS job does.
+      WOW_API_VERSION: 0.22.3
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install lupa (Lua 5.1 in Python) and the WoW API annotations
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet lupa
+          git clone -q --depth 1 --branch "$WOW_API_VERSION" https://github.com/Ketho/vscode-wow-api.git "$RUNNER_TEMP/wow-api"
+
+      - name: Test the text model, the editor, and the whole addon against the mock
+        shell: bash
+        run: WOW_API_ANNOTATIONS="$RUNNER_TEMP/wow-api/Annotations/Core" "$RUNNER_TEMP/venv/bin/python" tests/run_tests.py
+
+  luals:
+    name: LuaLS
+    runs-on: ubuntu-latest
+    env:
+      # Match the VS Code extensions so CI and the editor report the same diagnostics.
+      LUALS_VERSION: 3.19.2
+      WOW_API_VERSION: 0.22.3
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install lua-language-server and the WoW API annotations
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/luals"
+          curl -sSfL "https://github.com/LuaLS/lua-language-server/releases/download/${LUALS_VERSION}/lua-language-server-${LUALS_VERSION}-linux-x64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/luals"
+          git clone -q --depth 1 --branch "$WOW_API_VERSION" https://github.com/Ketho/vscode-wow-api.git "$RUNNER_TEMP/wow-api"
+
+      - name: Check against the baseline
+        shell: pwsh
+        run: ./build/luals-check.ps1 -LuaLS "$env:RUNNER_TEMP/luals/bin/lua-language-server" -WowApi "$env:RUNNER_TEMP/wow-api/Annotations/Core"

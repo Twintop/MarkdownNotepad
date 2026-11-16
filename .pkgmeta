@@ -1,0 +1,20 @@
+# BigWigs packager metadata. .github/workflows/release.yml runs the packager with -m .pkgmeta on every release tag.
+# release.yml writes CHANGELOG.md from the newest release's section of NewsContent.lua before running the packager.
+package-as: MarkdownNotepad
+
+manual-changelog:
+    filename: CHANGELOG.md
+    markup-type: markdown
+
+enable-nolib-creation: no
+
+ignore:
+    - build
+    - tools
+    - dist
+    - tests
+    - .github
+    - .vscode
+    - .claude
+    - CLAUDE.md
+    - .pkgmeta
