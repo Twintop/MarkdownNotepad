@@ -38,7 +38,7 @@ local function selection(ed)
 end
 
 T.test("loading and logging in", function()
-  ok(ns.LSHM and ns.LSHM.minor >= 4, "the library embedded in Libs loaded")
+  ok(ns.LSHM and ns.LSHM.minor >= 5, "the library embedded in Libs loaded (hard_breaks is minor 5)")
   MOCK.Fire("ADDON_LOADED", "MarkdownNotepad")
   MOCK.Fire("PLAYER_LOGIN")
   ok(ns.db and ns.charDB, "the saved variables are set up")
@@ -73,6 +73,9 @@ T.test("the editor opens on the welcome note", function()
   ok(not E.frame:IsShown(), "/mdn hides it again")
   ns:ToggleEditor()
   ok(E.frame:IsShown(), "and the key binding shows it")
+  eq(ns.settings.autosave, true, "autosave is on at first")
+  -- the tests up to "autosave" save by hand
+  ns.settings.autosave = false
 end)
 
 T.test("writing and saving a note", function()
@@ -415,10 +418,14 @@ T.test("settings", function()
   eq(ns.settings.highlight, false, "coloring off")
   eq(ns.settings.lineNumbers, false, "line numbers off")
   eq(ns.settings.newNoteScope, "character")
+  eq(ns.settings.keepLineBreaks, false, "line breaks as in Markdown")
+  eq(ns.settings.autosave, true, "autosave on")
   eq(E.editor.display, M.Escape(E.editor:GetText()), "uncolored, the display is only escaped")
   ok(not E.editor.gutter:IsShown(), "no line numbers")
   for _, check in ipairs(children(p, "Button")) do click(check) end
   eq(ns.settings.highlight, true)
+  eq(ns.settings.keepLineBreaks, true)
+  eq(ns.settings.autosave, false)
   for _, w in ipairs(MOCK.widgets) do
     if w._kind == "Slider" and w._parent and w._parent._parent == p then w:SetValue(16) end
   end
@@ -430,6 +437,24 @@ T.test("settings", function()
   E:SetSidebarShown(false)
   E:SetSidebarShown(true)
   ns.settings.newNoteScope = "account"
+end)
+
+T.test("notes keep their line breaks", function()
+  local R, html = ns.Render, E.previewHTML
+  R:SetMarkdown(html, "Step 1 is Westfall.\nStep 2 is the Barrens.\n\nAt 3c/3d, jump.")
+  ok(html._text:find("Westfall.<br/>Step 2", 1, true), "each line on its own line")
+  ok(html._text:find("Barrens.</p><br />", 1, true), "and an empty line after the paragraph")
+  ns.settings.keepLineBreaks = false
+  R:RenderAll()
+  ok(not html._text:find("<br", 1, true), "with the setting off, lines join as in Markdown")
+  ns.settings.keepLineBreaks = true
+  R:RenderAll()
+  ok(html._text:find("Westfall.<br/>Step 2", 1, true), "and on again")
+  -- the news is written in Markdown, so its lines join
+  local news = CreateFrame("SimpleHTML")
+  R:Setup(news)
+  R:SetMarkdown(news, "one\ntwo")
+  ok(not news._text:find("<br", 1, true), "a frame that isn't a note's joins them")
 end)
 
 T.test("the footer and the news", function()
@@ -504,6 +529,97 @@ T.test("deleting a note", function()
   eq(E.current.id, nil, "the editor moves to a new note")
 end)
 
+T.test("autosave", function()
+  local mage = Notes:FindByTitle("Mage things")
+  local before = mage.text
+  E:LoadNote(mage.id)
+  local eb = E.editor.editBox
+  eb:SetFocus()
+  eb:SetCursorPosition(#E.editor.display)
+  MOCK.Type(eb, " one")
+  MOCK.Tick(2.5)
+  ok(E.dirty, "off, nothing is saved by itself")
+
+  -- turned on in the settings: the changes so far are saved a moment later
+  E:ToggleSettings(E.sidebarToggle)
+  for _, check in ipairs(children(E.settingsPopup, "Button")) do
+    if check.text and check.text:GetText() == "Autosave" then click(check) end
+  end
+  E.settingsPopup:Hide()
+  eq(ns.settings.autosave, true)
+  eq(buttons(E.header)["Save Copy"].tipText, "Save this note as a new note, and edit that one. (Ctrl-Shift-S)",
+    "Save Copy's tooltip doesn't talk of changes that aren't saved")
+  eb:SetFocus()
+  MOCK.Tick(1.5)
+  MOCK.Type(eb, " two")
+  MOCK.Tick(1.5)
+  ok(E.dirty, "each change puts the save off")
+  MOCK.Tick(0.6)
+  ok(not E.dirty, "until there's been none for a moment")
+  eq(mage.text, before .. " one two")
+  ok(E.statusText:GetText():find("Saved", 1, true), "the status says so")
+  ctrl("Z")
+  ok(E.editor:GetText() ~= mage.text, "undo goes on past an autosave")
+  ctrl("Y")
+  eq(E.editor:GetText(), mage.text)
+
+  -- the title box is left as it's typed: a space at its end is for the next word
+  E.titleBox:SetFocus()
+  E.titleBox:SetText("Mage things ")
+  MOCK.FireScript(E.titleBox, "OnTextChanged", true)
+  MOCK.Tick(2.1)
+  eq(mage.title, "Mage things", "the title is saved")
+  eq(E.titleBox:GetText(), "Mage things ", "as it's typed")
+  ok(not E.dirty, "with nothing left to save")
+
+  local popups = #MOCK.popups
+  eb:SetFocus()
+  eb:SetCursorPosition(#E.editor.display)
+  MOCK.Type(eb, " three")
+  E:RequestLoad(Notes:FindByTitle("Welcome to Markdown Notepad").id)
+  eq(#MOCK.popups, popups, "opening another note doesn't ask")
+  eq(mage.text, before .. " one two three", "it saves the changes first")
+  eq(E.titleBox:GetText(), "Welcome to Markdown Notepad", "and opens the other note")
+
+  -- a new note is saved too, its title box left empty to type in
+  E:NewNote()
+  eb:SetFocus()
+  MOCK.Type(eb, "new words")
+  MOCK.Tick(2.1)
+  local fresh = Notes:Get(E.current.id)
+  ok(fresh, "a new note is saved")
+  eq(fresh.title, "Untitled")
+  eq(E.titleBox:GetText(), "")
+  ok(not E.dirty)
+
+  MOCK.Type(eb, " more")
+  E:Hide()
+  eq(fresh.text, "new words more", "closing the editor saves")
+  E:Show()
+
+  eb:SetFocus()
+  eb:SetCursorPosition(#E.editor.display)
+  MOCK.Type(eb, " copied")
+  click(buttons(E.header)["Save Copy"])
+  eq(fresh.text, "new words more copied", "Save Copy saves the note first")
+  local copy = Notes:Get(E.current.id)
+  eq(copy.title, "Untitled (copy)", "then copies it")
+  eq(copy.text, fresh.text)
+
+  eb:SetFocus()
+  eb:SetCursorPosition(#E.editor.display)
+  MOCK.Type(eb, " at logout")
+  MOCK.Fire("PLAYER_LOGOUT")
+  eq(copy.text, "new words more copied at logout", "a logout saves")
+  eq(ns.db.draft, nil, "with nothing to keep for the next login")
+  eq(#MOCK.popups, popups, "and nothing asked")
+
+  Notes:Delete(fresh.id)
+  Notes:Delete(copy.id)
+  -- the last test keeps unsaved changes
+  ns.settings.autosave = false
+end)
+
 T.test("unsaved changes are kept at logout", function()
   E:NewNote()
   E.titleBox:SetText("Draft")
@@ -515,6 +631,11 @@ T.test("unsaved changes are kept at logout", function()
   MOCK.Fire("PLAYER_LOGOUT")
   eq(ns.db.draft.text, "draft | text")
   eq(ns.db.draft.title, "Draft")
-  SAVED_DB = "MarkdownNotepadDB = " .. MOCK.Serialize(MarkdownNotepadDB)
+  -- as 1.0.0 left it: its welcome note wrapped at 100 characters, never changed (test_reload.lua
+  -- checks it gets this version's text)
+  welcome.text = "Write in **Markdown** on the left, and see it rendered on the right. *Save* keeps the note; it's\nlisted"
+  welcome.modified = welcome.created
+  MarkdownNotepadDB.version = 1
+  SAVED_DB ="MarkdownNotepadDB = " .. MOCK.Serialize(MarkdownNotepadDB)
   SAVED_CHAR = "MarkdownNotepadCharDB = " .. MOCK.Serialize(MarkdownNotepadCharDB)
 end)

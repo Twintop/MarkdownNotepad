@@ -11,6 +11,7 @@ ns.Editor = E
 local SIDEBAR_WIDTH = 200
 local ROW_HEIGHT = 20
 local PREVIEW_DELAY = 0.25
+local AUTOSAVE_DELAY = 2 -- seconds after the last change
 
 local function Settings() return ns.settings end
 
@@ -193,6 +194,7 @@ function E:Create()
 
   f:SetScript("OnUpdate", function() E:OnUpdate() end)
   f:SetScript("OnHide", function()
+    E:Autosave()
     if E.settingsPopup then E.settingsPopup:Hide() end
     if E.iconPopup then E.iconPopup:Hide() end
     if E.morePopup then E.morePopup:Hide() end
@@ -359,6 +361,7 @@ end
 function E:LayoutToolbar()
   local width = self.toolbar:GetWidth()
   if not width or width <= 0 then return end
+  self.toolbarWidth = width
   local x, y, gap, rowHeight = 0, 0, 3, 22
   for _, item in ipairs(self.toolItems) do
     if item.gap then
@@ -435,18 +438,34 @@ function E:BuildContent(main)
   local html = CreateFrame("SimpleHTML", nil, scroll)
   html:SetSize(200, 1)
   scroll:SetScrollChild(html)
-  R:Setup(html)
+  R:Setup(html, true)
   W.ScrollBar(scroll, 48)
-  scroll:SetScript("OnSizeChanged", function(_, width)
-    html:SetWidth(width)
-    E:SchedulePreview() -- SetMarkdown lays it out again at the new width
-  end)
-  self.preview, self.previewHTML = preview, html
+  scroll:SetScript("OnSizeChanged", function() E:FitPreview() end)
+  self.preview, self.previewScroll, self.previewHTML = preview, scroll, html
+end
+
+-- The layout follows the frames' sizes: OnSizeChanged lays them out again, and so does OnUpdate
+-- whenever a size has changed since. OnSizeChanged alone isn't enough: it can come while the
+-- size still reads 0, and on the Forever client the editor and preview never appeared.
+function E:CheckLayout()
+  if self.toolbar:GetWidth() ~= self.toolbarWidth then self:LayoutToolbar() end
+  if self.content:GetWidth() ~= self.contentWidth then self:LayoutContent() end
+  if self.preview:IsShown() then self:FitPreview() end
+end
+
+-- the preview wraps at its width; SetMarkdown lays it out again at a new one
+function E:FitPreview()
+  local width = self.previewScroll:GetWidth()
+  if not width or width <= 0 or width == self.previewWidth then return end
+  self.previewWidth = width
+  self.previewHTML:SetWidth(width)
+  self:SchedulePreview()
 end
 
 function E:LayoutContent()
   local width = self.content:GetWidth()
   if not width or width <= 0 then return end
+  self.contentWidth = width
   local ef = self.editor.frame
   ef:ClearAllPoints()
   ef:SetPoint("TOPLEFT")
@@ -649,6 +668,8 @@ function E:UpdateDirty()
   self.dirty = Notes.CleanTitle(self.titleBox:GetText()) ~= title or self.editor:GetText() ~= text
     or (scope and scope ~= self.current.scope) or false
   if not self.current.id and self.editor:GetText() == "" and self.titleBox:GetText() == "" then self.dirty = false end
+  -- every change puts the autosave off until there's been none for a moment
+  self.autosaveDue = self.dirty and Settings().autosave and GetTime() + AUTOSAVE_DELAY or nil
   self:UpdateButtons()
   self:UpdateStatus()
   if wasDirty ~= self.dirty then self:RefreshList() end
@@ -658,6 +679,7 @@ function E:UpdateButtons()
   if not self.frame then return end
   self.saveButton:SetEnabled(self.dirty or not self.current.id)
   self.copyButton:SetEnabled(self.current.id ~= nil) -- a note never saved has nothing to copy
+  self.copyButton:SetTooltip(L["SaveCopy"], Settings().autosave and L["SaveCopyAutosaveTooltip"] or L["SaveCopyTooltip"])
   local scope = self.current.scope
   local label
   if scope == "character" then
@@ -716,9 +738,10 @@ function E:LoadNote(id, draft)
   self:SchedulePreview(true)
 end
 
--- does continue() once there are no unsaved changes to lose: saved or thrown away, as the
--- player chooses
+-- does continue() once there are no unsaved changes to lose: saved by autosave, or saved or
+-- thrown away, as the player chooses
 function E:RequestLeave(continue)
+  self:Autosave()
   if not self.dirty then return continue() end
   local title = Notes.CleanTitle(self.titleBox:GetText())
   StaticPopup_Show("MARKDOWNNOTEPAD_UNSAVED", ns.Markup.Escape(title), nil, { continue = continue })
@@ -736,7 +759,9 @@ function E:NewNote()
   end)
 end
 
-function E:Save()
+-- auto: an autosave, which leaves the title box as it's typed. Putting the cleaned title back
+-- would take away a space typed before the next word, or fill an empty box with "Untitled".
+function E:Save(auto)
   local title, text, scope = self.titleBox:GetText(), self.editor:GetText(), self.current.scope
   local note
   if self.current.id and Notes:Get(self.current.id) then
@@ -746,17 +771,25 @@ function E:Save()
     self.current.id = note.id
   end
   self.current.scope = note.scope
-  self.titleBox:SetText(note.title)
+  if not auto then self.titleBox:SetText(note.title) end
   Settings().lastNote = note.id
   self.restored = nil
   self:UpdateDirty()
   self:RefreshList()
 end
 
+-- With autosave on, saves the changes now: when it's due, a moment after the last one, or
+-- before they'd be lost.
+function E:Autosave()
+  self.autosaveDue = nil
+  if self.dirty and Settings().autosave then self:Save(true) end
+end
+
 -- Saves what's in the editor as a new note, in the same scope, and edits that one. The note it
--- came from keeps what it had at its last save.
+-- came from keeps what it had at its last save; with autosave on, that's everything typed.
 function E:SaveCopy()
   if not (self.current.id and Notes:Get(self.current.id)) then return end
+  self:Autosave()
   local title = Notes:CopyTitle(self.titleBox:GetText())
   local note = Notes:Create(title, self.editor:GetText(), self.current.scope)
   self:LoadNote(note.id)
@@ -816,9 +849,11 @@ function E:OpenFirstNote()
   self:LoadNote(id)
 end
 
--- unsaved changes are kept through a logout or /reload, and come back when the editor opens
+-- at a logout or /reload, autosave saves the changes; without it, they're kept, and come back
+-- when the editor opens
 ns:On("LOGOUT", function()
   if not E.frame then return end
+  E:Autosave()
   if E.dirty then
     ns.db.draft = {
       id = E.current.id, scope = E.current.scope, title = E.titleBox:GetText(), text = E.editor:GetText(),
@@ -837,6 +872,8 @@ function E:SchedulePreview(now)
 end
 
 function E:OnUpdate()
+  self:CheckLayout()
+  if self.autosaveDue and GetTime() >= self.autosaveDue then self:Autosave() end
   if self.previewDue and GetTime() >= self.previewDue and Settings().showPreview then
     self.previewDue = nil
     R:SetMarkdown(self.previewHTML, self.editor:GetText())
@@ -938,6 +975,10 @@ function E:ToggleSettings(owner)
       settings.lineNumbers = v
       E.editor:SetLineNumbers(v)
     end), 22)
+    place(W.Check(p, L["SettingsAutosave"], function() return settings.autosave end, function(v)
+      settings.autosave = v
+      E:UpdateDirty() -- on: the changes so far are saved a moment later
+    end, L["SettingsAutosaveTooltip"]), 22)
     place(W.Check(p, L["SettingsNewNotesCharacter"], function() return settings.newNoteScope == "character" end,
       function(v) settings.newNoteScope = v and "character" or "account" end), 30)
 
@@ -945,7 +986,11 @@ function E:ToggleSettings(owner)
     place(W.Slider(p, L["SettingsTextSize"], 10, 24, 1, function() return settings.renderFontSize end, function(v)
       settings.renderFontSize = v
       R:UpdateFonts()
-    end, nil, 236), 44)
+    end, nil, 236), 38)
+    place(W.Check(p, L["SettingsKeepLineBreaks"], function() return settings.keepLineBreaks end, function(v)
+      settings.keepLineBreaks = v
+      R:RenderAll()
+    end, L["SettingsKeepLineBreaksTooltip"]), 30)
 
     heading(L["SettingsNewlyPinned"])
     local viewer = settings.viewer

@@ -111,8 +111,10 @@ end
 function R:SetWidth(w) setSize(self, w, nil) end
 function R:SetHeight(h) setSize(self, nil, h) end
 function R:SetSize(w, h) setSize(self, w, h) end
-function R:GetWidth() return self._w or DEFAULT_WIDTH end
-function R:GetHeight() return self._h or DEFAULT_HEIGHT end
+-- MOCK.unresolved: the game hasn't laid the frames out yet, so one sized only by its anchors
+-- reads 0 wide and high. Clearing it is the layout that follows, without an OnSizeChanged.
+function R:GetWidth() return self._w or (MOCK.unresolved and 0 or DEFAULT_WIDTH) end
+function R:GetHeight() return self._h or (MOCK.unresolved and 0 or DEFAULT_HEIGHT) end
 function R:GetSize() return self:GetWidth(), self:GetHeight() end
 function R:GetLeft() return 0 end
 function R:GetTop() return DEFAULT_HEIGHT end

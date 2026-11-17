@@ -43,7 +43,7 @@ end
 ------------------------------------------------------------------------------------------------
 
 local DB_DEFAULTS = {
-  version = 1,
+  version = 2,
   nextId = 1,
   notes = {},
   characters = {},
@@ -52,6 +52,8 @@ local DB_DEFAULTS = {
   settings = {
     editorFontSize = 13,
     renderFontSize = 13,
+    keepLineBreaks = true, -- every line break typed in a note shows, not only Markdown's
+    autosave = true, -- changes are saved a moment after the last one, and before they'd be lost
     highlight = true,
     lineNumbers = true,
     showPreview = true,
@@ -81,9 +83,24 @@ local function fill(t, defaults)
 end
 ns.fill = fill
 
+-- Version 2 (1.0.1): notes keep their line breaks, so 1.0.0's welcome note, its paragraphs
+-- wrapped at 100 characters, shows lines broken mid-sentence. One never changed since it was
+-- made (saving it changes its modified time) gets this version's text.
+local function Upgrade(db)
+  if db.version < 2 then
+    for _, note in pairs(db.notes) do
+      if note.title == L["WelcomeNoteTitle"] and note.modified == note.created then
+        note.text = L["WelcomeNoteText"]:format(L["WelcomeNoteTitle"])
+      end
+    end
+    db.version = 2
+  end
+end
+
 local function OnAddonLoaded()
   local fresh = MarkdownNotepadDB == nil
   MarkdownNotepadDB = fill(MarkdownNotepadDB or {}, DB_DEFAULTS)
+  Upgrade(MarkdownNotepadDB)
   MarkdownNotepadCharDB = fill(MarkdownNotepadCharDB or {}, CHAR_DEFAULTS)
   ns.db, ns.charDB = MarkdownNotepadDB, MarkdownNotepadCharDB
   ns.settings = ns.db.settings

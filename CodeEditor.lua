@@ -169,6 +169,7 @@ function methods:Layout()
   self.layoutDirty = nil
   local eb = self.editBox
   local width = self.scroll:GetWidth() or 0
+  self.scrollWidth = width
   if width > 0 then eb:SetWidth(width) end
 
   local gutterWidth = 0
@@ -250,7 +251,14 @@ function methods:SetHighlight(on)
 end
 
 function methods:OnUpdate()
-  if self.layoutDirty then self:Layout() end
+  -- laid out again when the width changes, whether or not OnSizeChanged said so (it can come
+  -- while the width still reads 0); and the font measured again, if it couldn't be before
+  local width = self.scroll:GetWidth()
+  if width ~= self.scrollWidth and not self.rowStep then
+    self:Measure()
+  elseif self.layoutDirty or width ~= self.scrollWidth then
+    self:Layout()
+  end
   if self.cursorDirty then
     self.cursorDirty = nil
     if self.editBox:HasFocus() and self.cursorTop then

@@ -136,7 +136,7 @@ local function CreateWindow()
   local html = CreateFrame("SimpleHTML", nil, scroll)
   html:SetSize(200, 1)
   scroll:SetScrollChild(html)
-  R:Setup(html)
+  R:Setup(html, true)
   -- dragging the text moves the window too
   html:RegisterForDrag("LeftButton")
   html:SetScript("OnDragStart", function() if not f.locked then f:StartMoving() end end)

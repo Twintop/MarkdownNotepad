@@ -30,9 +30,7 @@ L["WelcomeNoteTitle"] = "Welcome to Markdown Notepad"
 L["WelcomeNoteText"] = [[
 # Welcome to Markdown Notepad
 
-Write in **Markdown** on the left, and see it rendered on the right. *Save* keeps the note; it's
-listed in the sidebar for every character (an **account** note), or only for this character (a
-**character** note).
+Write in **Markdown** on the left, and see it rendered on the right. *Save* keeps the note; it's listed in the sidebar for every character (an **account** note), or only for this character (a **character** note).
 
 ## Formatting
 
@@ -54,12 +52,9 @@ listed in the sidebar for every character (an **account** note), or only for thi
 
 {rt1} {rt2} {rt3} {rt4} :tank: :healer: :dps: :check: :gold:
 
-Shift-click a spell or item while you type to link it: [Hearthstone](item:6948). Link another
-note by its title: [this note](note:%s).
+Shift-click a spell or item while you type to link it: [Hearthstone](item:6948). Link another note by its title: [this note](note:%s).
 
-Press **Pin** to keep a note on screen while you play. Its title bar has its settings (background
-opacity, and fading when the mouse isn't over it) and a padlock: a locked note stays in place and
-lets clicks through to the game. Hold Alt over it to use it again.
+Press **Pin** to keep a note on screen while you play. Its title bar has its settings (background opacity, and fading when the mouse isn't over it) and a padlock: a locked note stays in place and lets clicks through to the game. Hold Alt over it to use it again.
 ]]
 
 -- Render.lua
@@ -136,6 +131,7 @@ L["ScopeTooltipCharacter"] = "A character note is listed for the character it be
 L["ScopeTooltipAccount"] = "An account note is listed for all your characters. Click to make it a character note."
 L["SaveCopy"] = "Save Copy"
 L["SaveCopyTooltip"] = "Save this note, with any changes you haven't saved, as a new note, and edit that one. The note you started from stays as it was last saved. (Ctrl-Shift-S)"
+L["SaveCopyAutosaveTooltip"] = "Save this note as a new note, and edit that one. (Ctrl-Shift-S)"
 L["Pin"] = "Pin"
 L["PinTooltip"] = "Save this note and show it in its own window, which stays on screen while you play."
 L["Unpin"] = "Unpin"
@@ -150,8 +146,12 @@ L["SettingsEditor"] = "Editor"
 L["SettingsTextSize"] = "Text size"
 L["SettingsSyntaxColoring"] = "Syntax coloring"
 L["SettingsLineNumbers"] = "Line numbers"
-L["SettingsNewNotesCharacter"] = "New notes are character notes"
+L["SettingsAutosave"] = "Autosave"
+L["SettingsAutosaveTooltip"] = "Save your changes a moment after you stop typing, and when you open another note, close the editor, or log out.\n\nOff: changes are saved when you press Save (Ctrl-S). Changes you haven't saved are kept through a logout or /reload, and you're asked before they're lost."
+L["SettingsNewNotesCharacter"] ="New notes are character notes"
 L["SettingsPreview"] = "Preview and pinned notes"
+L["SettingsKeepLineBreaks"] = "Keep line breaks"
+L["SettingsKeepLineBreaksTooltip"] = "Show each line break you type, and a blank line as an empty line, as chat does.\n\nOff: as in Markdown, lines join into one paragraph unless one ends with two spaces."
 L["SettingsNewlyPinned"] = "Newly pinned notes"
 L["SettingsFadeThem"] = "Fade when the mouse isn't over them"
 

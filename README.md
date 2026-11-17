@@ -13,6 +13,10 @@ Found a bug, or have an idea? [Open an issue](https://github.com/Twintop/Markdow
 - **A toolbar** that formats the selection or inserts at the cursor: headings, bold, italic,
   strikethrough, highlight, code, code blocks, lists, task lists, quotes, rules, tables, links,
   images, raid target and role icons, alerts, footnotes, definitions, and links to other notes.
+- **Line breaks as you typed them.** Each line break in a note shows in the preview and pinned
+  notes, and a blank line is an empty line, so pasted plain text looks as it did. Turn off *Keep
+  line breaks* in Settings for Markdown's own rule: lines join into one paragraph unless one ends
+  with two spaces.
 - **Account or character notes.** Every note is saved account-wide, so any character can open
   any note. An account note is listed for all your characters; a character note is listed for
   the character it belongs to, and your other characters find it under *Other characters*.
@@ -25,9 +29,13 @@ Found a bug, or have an idea? [Open an issue](https://github.com/Twintop/Markdow
 - **Game links**: shift-click a spell or item while you type (or drag one onto the editor) to
   insert `[Fireball](spell:133)`, which shows the game's tooltip. `[Raid plan](note:Raid Plan)`
   links to another note.
-- **Save Copy** saves a note, with any changes you haven't saved, as a new note ("Title (copy)")
-  and edits that one; the note you started from keeps what it had at its last save.
-- Unsaved changes are kept through a logout or `/reload`.
+- **Autosave**: your changes are saved a moment after you stop typing, and when you open another
+  note, close the editor, or log out. With *Autosave* off in Settings, changes are saved when you
+  press Save; the ones you haven't saved are kept through a logout or `/reload`, and you're asked
+  before they're lost.
+- **Save Copy** saves a note as a new note ("Title (copy)") and edits that one. With autosave
+  off, the copy takes the changes you haven't saved, and the note you started from keeps what it
+  had at its last save.
 
 ## Using it
 

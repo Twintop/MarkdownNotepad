@@ -31,6 +31,13 @@ local function FontSize()
   return ns.settings and ns.settings.renderFontSize or 13
 end
 
+-- Notes keep the line breaks typed in them, as chat does, unless the setting is off. (The news
+-- is written in Markdown, whose lines join into paragraphs.)
+local KEEP_BREAKS = { hard_breaks = true }
+local function KeepBreaks(html)
+  return html.mdnNote and not (ns.settings and ns.settings.keepLineBreaks == false)
+end
+
 -- sizes the fonts to the setting, and renders every frame again at the new size
 function R:UpdateFonts()
   local size = FontSize()
@@ -41,20 +48,27 @@ function R:UpdateFonts()
     font:SetShadowColor(0, 0, 0, 0.9)
     font:SetSpacing(tag == "p" and 2 or 0)
   end
+  self:RenderAll()
+end
+
+-- renders every frame again, after a setting changed
+function R:RenderAll()
   for html, text in pairs(frames) do self:SetMarkdown(html, text) end
 end
 R:UpdateFonts()
 ns:On("LOGIN", function() R:UpdateFonts() end)
 
--- the HTML for text: the library's, or the text as plain paragraphs without it
-function R.ToHTML(text)
-  if renderer then return renderer:ToHTML(text) end
+-- the HTML for text: the library's, or the text as plain paragraphs without it. keepBreaks
+-- shows every line break in the text.
+function R.ToHTML(text, keepBreaks)
+  if renderer then return renderer:ToHTML(text, keepBreaks and KEEP_BREAKS or nil) end
   local escaped = text:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub("|", "||"):gsub("\n", "<br/>")
   return "<html><body><p>" .. escaped .. "</p></body></html>"
 end
 
--- gets a SimpleHTML frame ready to show markdown
-function R:Setup(html)
+-- gets a SimpleHTML frame ready to show markdown; note for a frame showing notes
+function R:Setup(html, note)
+  html.mdnNote = note and true or nil
   for tag, font in pairs(fonts) do
     html:SetFontObject(tag, font)
     html:SetTextColor(tag, unpack(COLORS[tag]))
@@ -67,14 +81,16 @@ function R:Setup(html)
 end
 
 -- Shows text in html, and sizes html's height to it (its width is the caller's). An unchanged
--- text at an unchanged width isn't laid out again.
+-- text at an unchanged width and settings isn't laid out again.
 function R:SetMarkdown(html, text)
   text = text or ""
   frames[html] = text
-  local width, size = html:GetWidth(), FontSize()
-  if html.mdnText == text and html.mdnWidth == width and html.mdnSize == size then return end
-  html.mdnText, html.mdnWidth, html.mdnSize = text, width, size
-  html:SetText(R.ToHTML(text))
+  local width, size, breaks = html:GetWidth(), FontSize(), KeepBreaks(html)
+  if html.mdnText == text and html.mdnWidth == width and html.mdnSize == size and html.mdnBreaks == breaks then
+    return
+  end
+  html.mdnText, html.mdnWidth, html.mdnSize, html.mdnBreaks = text, width, size, breaks
+  html:SetText(R.ToHTML(text, breaks))
   html:SetHeight(math.max(html:GetContentHeight() or 0, 1))
 end
 
