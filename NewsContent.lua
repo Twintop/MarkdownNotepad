@@ -3,6 +3,20 @@ local _, ns = ...
 -- Changelog shown by the News window (News.lua renders it). Markdown; newest release first.
 ns.NewsContent = [====[
 
+# 1.0.1-release (2026-11-17)
+
+## Notes
+
+- **Autosave**: your changes are saved a moment after you stop typing, and when you open another note, close the editor, or log out. Turn off *Autosave* in Settings to save only when you press Save, as before.
+- **Line breaks as you typed them**: each line break in a note shows in the preview and pinned notes, and a blank line is an empty line, so pasted plain text looks as it did. Turn off *Keep line breaks* in Settings for Markdown's own rule, where lines join into one paragraph unless one ends with two spaces.
+- With autosave on, **Save Copy** saves the note before copying it.
+- The welcome note, if you haven't changed it, gets this version's text, written for line breaks that show.
+
+## Fixes
+
+- On WoW Forever, the editor and preview now show the first time the editor opens, instead of an empty window until a note was pinned.
+- Updated LibSimpleHTMLMarkdown, the library that renders notes, to 1.0.5.
+
 # 1.0.0-release (2026-11-16)
 
 Initial release of the addon!
